@@ -21,6 +21,7 @@
  */
 
 #include <libsolidity/codegen/ExpressionCompiler.h>
+#include <libsolidity/codegen/ReturnInfoCollector.h>
 
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/TypeProvider.h>
@@ -2185,30 +2186,11 @@ void ExpressionCompiler::appendExternalFunctionCall(
 		solAssert(!_functionType.isBareCall(), "");
 	}
 
-	bool haveReturndatacopy = m_context.evmVersion().supportsReturndata();
-	unsigned retSize = 0;
-	bool dynamicReturnSize = false;
-	TypePointers returnTypes;
-	if (!returnSuccessConditionAndReturndata)
-	{
-		if (haveReturndatacopy)
-			returnTypes = _functionType.returnParameterTypes();
-		else
-			returnTypes = _functionType.returnParameterTypesWithoutDynamicTypes();
-
-		for (auto const& retType: returnTypes)
-			if (retType->isDynamicallyEncoded())
-			{
-				solAssert(haveReturndatacopy, "");
-				dynamicReturnSize = true;
-				retSize = 0;
-				break;
-			}
-			else if (retType->decodingType())
-				retSize += retType->decodingType()->calldataEncodedSize();
-			else
-				retSize += retType->calldataEncodedSize();
-	}
+	ReturnInfo const returnInfo = ReturnInfoCollector{m_context.evmVersion()}.collect(_functionType);
+	bool const haveReturndatacopy = m_context.evmVersion().supportsReturndata();
+	unsigned const retSize = returnInfo.estimatedReturnSize;
+	bool const dynamicReturnSize = returnInfo.dynamicReturnSize;
+	TypePointers const& returnTypes = returnInfo.returnTypes;
 
 	// Evaluate arguments.
 	TypePointers argumentTypes;

@@ -2252,3 +2252,144 @@ string YulUtilFunctions::revertReasonIfDebug(string const& _message)
 {
 	return revertReasonIfDebug(m_revertStrings, _message);
 }
+
+std::string YulUtilFunctions::decodeReturnParametersFunction(
+	RevertStrings _revertStrings,
+	TypePointers const& _returnTypes,
+	bool _dynamicReturnSize,
+	string const& _retVars
+)
+{
+	solAssert(!_retVars.empty(), "This function must only be called when there are return-parameters to be decoded.");
+
+	ABIFunctions abi(m_evmVersion, _revertStrings, m_functionCollector);
+
+	string const abiDecode = abi.tupleDecoder(_returnTypes, true);
+	string const functionName =
+		"decode_return_parameters_" +
+		revertStringsToString(_revertStrings) + "_" +
+		abiDecode;
+
+	return m_functionCollector.createFunction(functionName, [&]() {
+		return util::Whiskers(R"(
+			function <functionName>(dataMpos, returnSize) <?hasRetVars> -> <retVars> </hasRetVars> {
+				<?dynamicReturnSize>
+					// copy dynamic return data out
+					returndatacopy(dataMpos, 0, returndatasize())
+				</dynamicReturnSize>
+
+				// update freeMemoryPointer according to dynamic return size
+				mstore(<freeMemoryPointer>, add(dataMpos, and(add(returnSize, 0x3f), not(0x1f))))
+
+				// decode return parameters from external try-call into retVars
+				<retVars> := <abiDecode>(dataMpos, add(dataMpos, returnSize))
+			}
+		)")
+		("retVars", _retVars)
+		("hasRetVars", !_retVars.empty())
+		("functionName", functionName)
+		("dynamicReturnSize", _dynamicReturnSize)
+		("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer))
+		("abiDecode", abiDecode)
+		.render();
+	});
+}
+
+std::string YulUtilFunctions::tryDecodeErrorMessageFunction()
+{
+	string const functionName = "try_decode_error_message";
+
+	return m_functionCollector.createFunction(functionName, [&]() {
+		string const errorHash = FixedHash<4>(util::keccak256("Error(string)")).hex();
+		return util::Whiskers(R"(
+			function <functionName>() -> data {
+				data := mload(<freeMemoryPointer>)
+
+				if lt(returndatasize(), 0x44) {
+					data := 0
+					leave
+				}
+
+				returndatacopy(0, 0, 4)
+				let sig := <getSig>
+				if iszero(eq(sig, 0x<ErrorSignature>)) {
+					data := 0
+					leave
+				}
+
+				returndatacopy(data, 4, sub(returndatasize(), 4))
+				let offset := mload(data)
+				if or(
+					gt(offset, 0xffffffffffffffff),
+					gt(add(offset, 0x24), returndatasize())
+				) {
+					data := 0
+					leave
+				}
+
+				let msg := add(data, offset)
+				let length := mload(msg)
+				if gt(length, 0xffffffffffffffff) {
+					data := 0
+					leave
+				}
+
+				let end := add(add(msg, 0x20), length)
+				if gt(end, add(data, returndatasize())) {
+					data := 0
+					leave
+				}
+
+				mstore(<freeMemoryPointer>, and(add(end, 0x1f), not(0x1f)))
+				data := msg
+			}
+		)")
+		("ErrorSignature", errorHash)
+		("functionName", functionName)
+		("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer))
+		("getSig",
+			m_evmVersion.hasBitwiseShifting() ?
+			"shr(224, mload(0))" :
+			"div(mload(0), " + (u256(1) << 224).str() + ")"
+		).render();
+	});
+}
+
+string YulUtilFunctions::extractReturndataFunction()
+{
+	string const functionName = "extract_returndata";
+
+	return m_functionCollector.createFunction(functionName, [&]() {
+		return util::Whiskers(R"(
+			function <functionName>() -> data {
+				<?supportsReturndata>
+					switch returndatasize()
+					case 0 {
+						data := 0x60
+					}
+					default {
+						// NB: We could maybe use allocateMemoryArrayFunction(...) for allocating
+						// our data here, too?
+
+						// allocate some memory into data of size returndatasize() + PADDING
+						data := <allocate>(and(add(returndatasize(), 0x3f), not(0x1f)))
+
+						// store array length into the front
+						mstore(data, returndatasize())
+
+						// append to data
+						returndatacopy(add(data, 0x20), 0, returndatasize())
+					}
+				<!supportsReturndata>
+					data := <zeroPointer>
+				</supportsReturndata>
+			}
+		)")
+		("supportsReturndata", m_evmVersion.supportsReturndata())
+		("allocate", allocationFunction())
+		("functionName", functionName)
+		("zeroPointer", to_string(CompilerUtils::zeroPointer))
+		.render();
+	});
+}
+
