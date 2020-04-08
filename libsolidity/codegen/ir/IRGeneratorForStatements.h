@@ -79,7 +79,7 @@ public:
 private:
 	/// Handles all catch cases of a try statement, except the success-case.
 	void handleCatch(TryStatement const& _tryStatement);
-	void handleCatchStructured(
+	void handleCatchStructuredAndFallback(
 		TryCatchClause const& _structured,
 		TryCatchClause const* _fallback
 	);

@@ -1773,14 +1773,17 @@ bool IRGeneratorForStatements::visit(TryStatement const& _tryStatement)
 void IRGeneratorForStatements::handleCatch(TryStatement const& _tryStatement)
 {
 	if (_tryStatement.structuredClause())
-		handleCatchStructured(*_tryStatement.structuredClause(), _tryStatement.fallbackClause());
+		handleCatchStructuredAndFallback(*_tryStatement.structuredClause(), _tryStatement.fallbackClause());
 	else if (_tryStatement.fallbackClause())
 		handleCatchFallback(*_tryStatement.fallbackClause());
 	else
 		rethrow();
 }
 
-void IRGeneratorForStatements::handleCatchStructured(TryCatchClause const& _structured, TryCatchClause const* _fallback)
+void IRGeneratorForStatements::handleCatchStructuredAndFallback(
+	TryCatchClause const& _structured,
+	TryCatchClause const* _fallback
+)
 {
 	solAssert(
 		_structured.parameters() &&
@@ -1802,8 +1805,7 @@ void IRGeneratorForStatements::handleCatchStructured(TryCatchClause const& _stru
 	{
 		solAssert(_structured.parameters()->parameters().size() == 1, "");
 		IRVariable const& var = m_context.addLocalVariable(*_structured.parameters()->parameters().front());
-		declare(var);
-		m_code << var.commaSeparatedList() << " := " << dataVariable << "\n";
+		define(var) << dataVariable << "\n";
 	}
 	_structured.accept(*this);
 	m_code << "}\n";
@@ -1828,10 +1830,7 @@ void IRGeneratorForStatements::handleCatchFallback(TryCatchClause const& _fallba
 		);
 
 		VariableDeclaration const& paramDecl = *_fallback.parameters()->parameters().front();
-		IRVariable const& parameterVariable = m_context.addLocalVariable(paramDecl);
-		string const parameterVariableName = parameterVariable.commaSeparatedList();
-
-		m_code << "let " << parameterVariableName << " := " << m_utils.extractReturndataFunction() << "()\n";
+		define(m_context.addLocalVariable(paramDecl)) << m_utils.extractReturndataFunction() << "()\n";
 	}
 	_fallback.accept(*this);
 }
