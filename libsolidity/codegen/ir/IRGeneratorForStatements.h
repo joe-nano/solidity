@@ -77,9 +77,6 @@ public:
 	bool visit(TryCatchClause const& _tryCatchClause) override;
 
 private:
-	/// @returns some Yul code to decode the return parameters of the current call.
-	std::string decodeReturnParameters(ReturnInfo const& _returnInfo);
-
 	/// Handles all catch cases of a try statement, except the success-case.
 	void handleCatch(TryStatement const& _tryStatement);
 	void handleCatchStructured(

@@ -1270,8 +1270,7 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 	bool const isDelegateCall = funKind == FunctionType::Kind::BareDelegateCall || funKind == FunctionType::Kind::DelegateCall;
 	bool const useStaticCall = funKind == FunctionType::Kind::BareStaticCall || (funType.stateMutability() <= StateMutability::View && m_context.evmVersion().hasStaticCall());
 
-	auto returnInfoCollector = ReturnInfoCollector{m_context.evmVersion()};
-	m_returnInfo.emplace(returnInfoCollector.collect(_functionCall, m_context.newYulVariable()));
+	m_returnInfo.emplace(ReturnInfoCollector{m_context.evmVersion()}.collect(_functionCall, m_context.newYulVariable()));
 
 	TypePointers argumentTypes;
 	vector<string> argumentStrings;
@@ -1302,24 +1301,25 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 			if iszero(extcodesize(<address>)) { revert(0, 0) }
 		</checkExistence>
 
-		// storage for returned data and arguments
+		// storage for arguments and returned data
 		let <pos> := <freeMemory>
 		mstore(<pos>, <shl28>(<funId>))
 		let <end> := <encodeArgs>(add(<pos>, 4) <argumentString>)
 
-		let <result> := <call>(<gas>, <address>, <?hasValue> <value>, </hasValue> <pos>, sub(<end>, <pos>), <pos>, <reservedReturnSize>)
+		let <success> := <call>(<gas>, <address>, <?hasValue> <value>, </hasValue> <pos>, sub(<end>, <pos>), <pos>, <reservedReturnSize>)
 		<?isTryCall>
-			let <trySuccessConditionVariable> := <result>
+			let <trySuccessConditionVariable> := <success>
 		<!isTryCall>
-			if iszero(<result>) { <forwardingRevert>() }
-			<?hasRetVars>
-				let <retVars> := <decodeReturnParameters>(<pos>, <returnSize>)
-			</hasRetVars>
+			if iszero(<success>) { <forwardingRevert>() }
 		</isTryCall>
+		<?hasRetVars> let <retVars> </hasRetVars>
+		if <success> {
+			<?hasRetVars> <retVars> := </hasRetVars> <decodeReturnParameters>(<pos>, <returnSize>)
+		}
 	)");
 	templ("pos", m_returnInfo->returndataVariable);
 	templ("end", m_context.newYulVariable());
-	templ("result", m_context.newYulVariable());
+	templ("success", m_context.newYulVariable());
 	templ("freeMemory", freeMemory());
 	templ("shl28", m_utils.shiftLeftFunction(8 * (32 - 4)));
 	templ("funId", IRVariable(_functionCall.expression()).part("functionIdentifier").name());
@@ -1337,22 +1337,14 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 	templ("reservedReturnSize", m_returnInfo->dynamicReturnSize ? "0" : to_string(m_returnInfo->estimatedReturnSize));
 
 	string const retVars = IRVariable(*m_returnInfo->functionCall).commaSeparatedList();
+	templ("retVars", retVars);
 	templ("hasRetVars", !retVars.empty());
-	templ("returns", !m_returnInfo->returnTypes.empty());
 	solAssert(retVars.empty() == m_returnInfo->returnTypes.empty(), "");
 
-	if (!retVars.empty())
-	{
-		templ("retVars", retVars);
-		templ("decodeReturnParameters",
-			m_utils.decodeReturnParametersFunction(
-				m_context.revertStrings(),
-				m_returnInfo->returnTypes,
-				m_returnInfo->dynamicReturnSize,
-				retVars
-			)
-		);
-	}
+	templ("decodeReturnParameters", m_utils.decodeReturnParametersFunction(
+		m_returnInfo->returnTypes,
+		m_returnInfo->dynamicReturnSize
+	));
 
 	templ("isTryCall", _functionCall.annotation().tryCall);
 	if (_functionCall.annotation().tryCall)
@@ -1774,32 +1766,6 @@ bool IRGeneratorForStatements::visit(TryStatement const& _tryStatement)
 	return false;
 }
 
-string IRGeneratorForStatements::decodeReturnParameters(ReturnInfo const& _returnInfo)
-{
-	auto const retVars = IRVariable(*_returnInfo.functionCall).commaSeparatedList();
-	if (retVars.empty())
-		return "";
-
-	return Whiskers(R"(
-		let <retVars> := <decodeReturnParameters>(<pos>, <returnSize>)
-	)")
-	("retVars", retVars)
-	("decodeReturnParameters",
-		m_utils.decodeReturnParametersFunction(
-			m_context.revertStrings(),
-			_returnInfo.returnTypes,
-			_returnInfo.dynamicReturnSize,
-			retVars
-		)
-	)
-	("pos", _returnInfo.returndataVariable)
-	("returnSize",
-		m_context.evmVersion().supportsReturndata() ?
-		"returndatasize()"s :
-		to_string(_returnInfo.estimatedReturnSize)
-	).render();
-}
-
 void IRGeneratorForStatements::decodeTryCallReturnParameters(
 	TryCatchClause const& _successClause,
 	ReturnInfo const& _returnInfo
@@ -1807,8 +1773,6 @@ void IRGeneratorForStatements::decodeTryCallReturnParameters(
 {
 	if (!_successClause.parameters())
 		return;
-
-	m_code << decodeReturnParameters(_returnInfo);
 
 	if (_successClause.parameters()->parameters().size() > 1)
 	{

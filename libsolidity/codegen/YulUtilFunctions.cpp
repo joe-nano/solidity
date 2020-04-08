@@ -2253,21 +2253,17 @@ string YulUtilFunctions::revertReasonIfDebug(string const& _message)
 	return revertReasonIfDebug(m_revertStrings, _message);
 }
 
-std::string YulUtilFunctions::decodeReturnParametersFunction(
-	RevertStrings _revertStrings,
+string YulUtilFunctions::decodeReturnParametersFunction(
 	TypePointers const& _returnTypes,
-	bool _dynamicReturnSize,
-	string const& _retVars
+	bool _dynamicReturnSize
 )
 {
-	solAssert(!_retVars.empty(), "This function must only be called when there are return-parameters to be decoded.");
-
-	ABIFunctions abi(m_evmVersion, _revertStrings, m_functionCollector);
+	ABIFunctions abi(m_evmVersion, m_revertStrings, m_functionCollector);
 
 	string const abiDecode = abi.tupleDecoder(_returnTypes, true);
 	string const functionName =
 		"decode_return_parameters_" +
-		revertStringsToString(_revertStrings) + "_" +
+		revertStringsToString(m_revertStrings) + "_" +
 		abiDecode;
 
 	return m_functionCollector.createFunction(functionName, [&]() {
@@ -2282,11 +2278,11 @@ std::string YulUtilFunctions::decodeReturnParametersFunction(
 				mstore(<freeMemoryPointer>, add(dataMpos, and(add(returnSize, 0x3f), not(0x1f))))
 
 				// decode return parameters from external try-call into retVars
-				<retVars> := <abiDecode>(dataMpos, add(dataMpos, returnSize))
+				<?hasRetVars> <retVars> := </hasRetVars> <abiDecode>(dataMpos, add(dataMpos, returnSize))
 			}
 		)")
-		("retVars", _retVars)
-		("hasRetVars", !_retVars.empty())
+		("retVars", suffixedVariableNameList("ret", 0, TupleType(_returnTypes).sizeOnStack()))
+		("hasRetVars", TupleType(_returnTypes).sizeOnStack() > 0)
 		("functionName", functionName)
 		("dynamicReturnSize", _dynamicReturnSize)
 		("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer))
@@ -2295,7 +2291,7 @@ std::string YulUtilFunctions::decodeReturnParametersFunction(
 	});
 }
 
-std::string YulUtilFunctions::tryDecodeErrorMessageFunction()
+string YulUtilFunctions::tryDecodeErrorMessageFunction()
 {
 	string const functionName = "try_decode_error_message";
 

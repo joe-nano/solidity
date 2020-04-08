@@ -325,21 +325,13 @@ public:
 	std::string revertReasonIfDebug(std::string const& _message = "");
 
 	/// Generates the function-body and returns the function name for a function to decode the
-	/// return parameters.
+	/// return parameters of an external function call.
 	///
-	/// @param _revertStrings     RevertStrings configuration from current context.
 	/// @param _returnTypes       Function call's return types.
 	/// @param _dynamicReturnSize Whether or not the return size is determined dynamically.
-	/// @param _retVars           Comma separated list of IR variable symbols to assign the decoded
-	///                           parameters to.
 	///
 	/// @returns helper function-name used to decode return parameters.
-	std::string decodeReturnParametersFunction(
-		RevertStrings _revertStrings,
-		TypePointers const& _returnTypes,
-		bool _dynamicReturnSize,
-		std::string const& _retVars
-	);
+	std::string decodeReturnParametersFunction(TypePointers const& _returnTypes, bool _dynamicReturnSize);
 
 	/// The returned function either fails upon coding and then returns 0,
 	/// on success, the returned function returns a newly allocated memory storage
