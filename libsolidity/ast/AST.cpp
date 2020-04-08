@@ -96,9 +96,9 @@ bool ContractDefinition::derivesFrom(ContractDefinition const& _base) const
 	return util::contains(annotation().linearizedBaseContracts, &_base);
 }
 
-map<util::FixedHash<4>, FunctionTypePointer> ContractDefinition::interfaceFunctions() const
+map<util::FixedHash<4>, FunctionTypePointer> ContractDefinition::interfaceFunctions(bool _includeDerivedFunctions) const
 {
-	auto exportedFunctionList = interfaceFunctionList();
+	auto exportedFunctionList = interfaceFunctionList(_includeDerivedFunctions);
 
 	map<util::FixedHash<4>, FunctionTypePointer> exportedFunctions;
 	for (auto const& it: exportedFunctionList)
@@ -174,14 +174,16 @@ vector<EventDefinition const*> const& ContractDefinition::interfaceEvents() cons
 	return *m_interfaceEvents;
 }
 
-vector<pair<util::FixedHash<4>, FunctionTypePointer>> const& ContractDefinition::interfaceFunctionList() const
+vector<pair<util::FixedHash<4>, FunctionTypePointer>> const& ContractDefinition::interfaceFunctionList(bool _includeDerivedFunctions) const
 {
-	if (!m_interfaceFunctionList)
+	if (!m_interfaceFunctionList[_includeDerivedFunctions])
 	{
 		set<string> signaturesSeen;
-		m_interfaceFunctionList = make_unique<vector<pair<util::FixedHash<4>, FunctionTypePointer>>>();
+		m_interfaceFunctionList[_includeDerivedFunctions] = make_unique<vector<pair<util::FixedHash<4>, FunctionTypePointer>>>();
 		for (ContractDefinition const* contract: annotation().linearizedBaseContracts)
 		{
+			if (_includeDerivedFunctions == false && contract != this)
+				continue;
 			vector<FunctionTypePointer> functions;
 			for (FunctionDefinition const* f: contract->definedFunctions())
 				if (f->isPartOfExternalInterface())
@@ -199,12 +201,12 @@ vector<pair<util::FixedHash<4>, FunctionTypePointer>> const& ContractDefinition:
 				{
 					signaturesSeen.insert(functionSignature);
 					util::FixedHash<4> hash(util::keccak256(functionSignature));
-					m_interfaceFunctionList->emplace_back(hash, fun);
+					m_interfaceFunctionList[_includeDerivedFunctions]->emplace_back(hash, fun);
 				}
 			}
 		}
 	}
-	return *m_interfaceFunctionList;
+	return *m_interfaceFunctionList[_includeDerivedFunctions];
 }
 
 TypePointer ContractDefinition::type() const

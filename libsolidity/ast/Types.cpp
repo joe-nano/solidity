@@ -3717,9 +3717,13 @@ MemberList::MemberMap MagicType::nativeMembers(ContractDefinition const*) const
 				{"creationCode", TypeProvider::array(DataLocation::Memory)},
 				{"runtimeCode", TypeProvider::array(DataLocation::Memory)},
 				{"name", TypeProvider::stringMemory()},
+				{"interfaceId", TypeProvider::fixedBytes(4)},
 			});
 		else
-			return {};
+			return MemberList::MemberMap({
+				{"name", TypeProvider::stringMemory()},
+				{"interfaceId", TypeProvider::fixedBytes(4)},
+			});
 	}
 	}
 	solAssert(false, "Unknown kind of magic.");
