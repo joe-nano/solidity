@@ -88,12 +88,6 @@ private:
 	/// Generates code to rethrow an exception.
 	void rethrow();
 
-	/// Generates the code for decoding the return parameters in a try call.
-	void decodeTryCallReturnParameters(
-		TryCatchClause const& _successClause,
-		ReturnInfo const& _returnInfo
-	);
-
 	/// Appends code to call an external function with the given arguments.
 	/// All involved expressions have already been visited.
 	void appendExternalFunctionCall(
@@ -163,9 +157,6 @@ private:
 	IRGenerationContext& m_context;
 	YulUtilFunctions& m_utils;
 	std::optional<IRLValue> m_currentLValue;
-
-	/// Contains some variables to remember during function calls (especially with regards to try-catch)
-	std::optional<ReturnInfo> m_returnInfo;
 };
 
 }
