@@ -33,11 +33,7 @@ class FunctionCall;
 /// Holds a set of properties of an external function call's return values.
 struct ReturnInfo
 {
-	/// Related function call this ReturnInfo was generated from.
-	FunctionCall const* functionCall = nullptr;
-
-	/// Name of the yul variable pointing at the memory location of the (undecoded) return data.
-	std::string returndataVariable = {};
+	ReturnInfo(langutil::EVMVersion const& _evmVersion, FunctionType const& _functionType);
 
 	/// Vector of TypePointer, for each return variable. Dynamic types are already replaced if required.
 	TypePointers returnTypes = {};
@@ -47,38 +43,6 @@ struct ReturnInfo
 
 	/// Contains the at compile time estimated return size.
 	unsigned estimatedReturnSize = 0;
-};
-
-/// Helper-class used to construct ReturnInfo.
-class ReturnInfoCollector
-{
-public:
-	explicit ReturnInfoCollector(langutil::EVMVersion const& _evmVersion);
-
-	/// Assembles some information about the return types and related.
-	///
-	/// @param _functionCall the FunctionCall to extract the return-data information from.
-	/// @param _returndataYulVariable Used by the caller to remember the corresponding Yul-variable used for storing undecoded return values.
-	///
-	/// @returns an info-struct containing the collected information including the passed input variables.
-	[[nodiscard]] ReturnInfo collect(FunctionCall const& _functionCall, std::string _returndataYulVariable);
-
-	/// Assembles some information about the return types and related.
-	///
-	/// @param _functionType the actual function type information to compute the return-info from.
-	/// @param _returndataYulVariable Can be used by the caller to remember the corresponding Yul-variable used for storing undecoded return values.
-	/// @param _functionCall Can be used by the caller to remember the corresponding FunctionCall.
-	///
-	/// @returns an info-struct containing the collected information, optionally also with the input
-	///          avariables @p _returndataYulVariable and @p _functionCall.
-	[[nodiscard]] ReturnInfo collect(
-		FunctionType const& _functionType,
-		std::string _returndataYulVariable = {},
-		FunctionCall const* _functionCall = nullptr
-	);
-
-private:
-	langutil::EVMVersion m_evmVersion;
 };
 
 } // end namespace

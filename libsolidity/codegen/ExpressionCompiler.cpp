@@ -2186,7 +2186,7 @@ void ExpressionCompiler::appendExternalFunctionCall(
 		solAssert(!_functionType.isBareCall(), "");
 	}
 
-	ReturnInfo const returnInfo = ReturnInfoCollector{m_context.evmVersion()}.collect(_functionType);
+	ReturnInfo const returnInfo{m_context.evmVersion(), _functionType};
 	bool const haveReturndatacopy = m_context.evmVersion().supportsReturndata();
 	unsigned const retSize = returnInfo.estimatedReturnSize;
 	bool const dynamicReturnSize = returnInfo.dynamicReturnSize;

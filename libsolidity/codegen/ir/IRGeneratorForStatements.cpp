@@ -1270,7 +1270,7 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 	bool const isDelegateCall = funKind == FunctionType::Kind::BareDelegateCall || funKind == FunctionType::Kind::DelegateCall;
 	bool const useStaticCall = funKind == FunctionType::Kind::BareStaticCall || (funType.stateMutability() <= StateMutability::View && m_context.evmVersion().hasStaticCall());
 
-	ReturnInfo returnInfo = ReturnInfoCollector{m_context.evmVersion()}.collect(_functionCall, m_context.newYulVariable());
+	ReturnInfo const returnInfo{m_context.evmVersion(), funType};
 
 	TypePointers argumentTypes;
 	vector<string> argumentStrings;
@@ -1317,7 +1317,7 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 			<?hasRetVars> <retVars> := </hasRetVars> <decodeReturnParameters>(<pos>, <returnSize>)
 		}
 	)");
-	templ("pos", returnInfo.returndataVariable);
+	templ("pos", m_context.newYulVariable());
 	templ("end", m_context.newYulVariable());
 	templ("success", m_context.newYulVariable());
 	templ("freeMemory", freeMemory());
@@ -1334,7 +1334,7 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 
 	templ("reservedReturnSize", returnInfo.dynamicReturnSize ? "0" : to_string(returnInfo.estimatedReturnSize));
 
-	string const retVars = IRVariable(*returnInfo.functionCall).commaSeparatedList();
+	string const retVars = IRVariable(_functionCall).commaSeparatedList();
 	templ("retVars", retVars);
 	templ("hasRetVars", !retVars.empty());
 	solAssert(retVars.empty() == returnInfo.returnTypes.empty(), "");

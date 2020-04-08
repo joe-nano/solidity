@@ -19,32 +19,19 @@
 #include <libsolidity/ast/Types.h>
 #include <libsolidity/ast/AST.h>
 
-namespace solidity::frontend {
+using namespace solidity::frontend;
+using namespace solidity::langutil;
 
-ReturnInfoCollector::ReturnInfoCollector(langutil::EVMVersion const& _evmVersion): m_evmVersion{_evmVersion}
-{
-}
-
-ReturnInfo ReturnInfoCollector::collect(FunctionCall const& _functionCall, std::string _newYulVariable)
-{
-	solAssert(_functionCall.expression().annotation().type, "Type of expression not set.");
-	FunctionType const& funType = dynamic_cast<FunctionType const&>(*_functionCall.expression().annotation().type);
-
-	return collect(funType, _newYulVariable, &_functionCall);
-}
-
-ReturnInfo ReturnInfoCollector::collect(FunctionType const& _functionType, std::string _newYulVariable, FunctionCall const* _functionCall)
+ReturnInfo::ReturnInfo(EVMVersion const& _evmVersion, FunctionType const& _functionType):
+	dynamicReturnSize(false),
+	estimatedReturnSize(0)
 {
 	FunctionType::Kind const funKind = _functionType.kind();
-	bool const haveReturndatacopy = m_evmVersion.supportsReturndata();
+	bool const haveReturndatacopy = _evmVersion.supportsReturndata();
 	bool const returnSuccessConditionAndReturndata =
 		funKind == FunctionType::Kind::BareCall ||
 		funKind == FunctionType::Kind::BareDelegateCall ||
 		funKind == FunctionType::Kind::BareStaticCall;
-
-	TypePointers returnTypes{};
-	bool dynamicReturnSize = false;
-	unsigned estimatedReturnSize = 0;
 
 	if (!returnSuccessConditionAndReturndata)
 	{
@@ -66,14 +53,4 @@ ReturnInfo ReturnInfoCollector::collect(FunctionType const& _functionType, std::
 			else
 				estimatedReturnSize += retType->calldataEncodedSize();
 	}
-
-	return ReturnInfo{
-		_functionCall,
-		_newYulVariable,
-		move(returnTypes),
-		dynamicReturnSize,
-		estimatedReturnSize
-	};
 }
-
-} // end namespace
