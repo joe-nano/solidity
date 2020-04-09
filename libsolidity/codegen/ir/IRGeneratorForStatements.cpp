@@ -1759,8 +1759,7 @@ bool IRGeneratorForStatements::visit(TryStatement const& _tryStatement)
 		for (ASTPointer<VariableDeclaration> const& varDecl: successClause.parameters()->parameters())
 		{
 			solAssert(varDecl, "");
-			define(
-				m_context.addLocalVariable(*varDecl),
+			define(m_context.addLocalVariable(*varDecl),
 				successClause.parameters()->parameters().size() == 1 ?
 				IRVariable(externalCall) :
 				IRVariable(externalCall).tupleComponent(i++)
