@@ -15,22 +15,21 @@
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 /**
- * Component that translates Solidity code into Yul at statement level and below.
+ * Component that computes information relevant during decoding an external function
+ * call's return values.
  */
 #pragma once
 
 #include <liblangutil/EVMVersion.h>
 #include <libsolidity/ast/Types.h>
 
-#include <functional>
-#include <string>
-
 namespace solidity::frontend
 {
 
-class FunctionCall;
-
-/// Holds a set of properties of an external function call's return values.
+/**
+ * Computes and holds information relevant during decoding an external function
+ * call's return values.
+ */
 struct ReturnInfo
 {
 	ReturnInfo(langutil::EVMVersion const& _evmVersion, FunctionType const& _functionType);
@@ -45,4 +44,4 @@ struct ReturnInfo
 	unsigned estimatedReturnSize = 0;
 };
 
-} // end namespace
+}
