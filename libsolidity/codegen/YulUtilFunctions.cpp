@@ -2253,44 +2253,6 @@ string YulUtilFunctions::revertReasonIfDebug(string const& _message)
 	return revertReasonIfDebug(m_revertStrings, _message);
 }
 
-string YulUtilFunctions::decodeReturnParametersFunction(
-	TypePointers const& _returnTypes,
-	bool _dynamicReturnSize
-)
-{
-	ABIFunctions abi(m_evmVersion, m_revertStrings, m_functionCollector);
-
-	string const abiDecode = abi.tupleDecoder(_returnTypes, true);
-	string const functionName =
-		"decode_return_parameters_" +
-		revertStringsToString(m_revertStrings) + "_" +
-		abiDecode;
-
-	return m_functionCollector.createFunction(functionName, [&]() {
-		return util::Whiskers(R"(
-			function <functionName>(dataMpos, returnSize) <?hasRetVars> -> <retVars> </hasRetVars> {
-				<?dynamicReturnSize>
-					// copy dynamic return data out
-					returndatacopy(dataMpos, 0, returndatasize())
-				</dynamicReturnSize>
-
-				// update freeMemoryPointer according to dynamic return size
-				mstore(<freeMemoryPointer>, add(dataMpos, and(add(returnSize, 0x3f), not(0x1f))))
-
-				// decode return parameters from external try-call into retVars
-				<?hasRetVars> <retVars> := </hasRetVars> <abiDecode>(dataMpos, add(dataMpos, returnSize))
-			}
-		)")
-		("retVars", suffixedVariableNameList("ret", 0, TupleType(_returnTypes).sizeOnStack()))
-		("hasRetVars", TupleType(_returnTypes).sizeOnStack() > 0)
-		("functionName", functionName)
-		("dynamicReturnSize", _dynamicReturnSize)
-		("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer))
-		("abiDecode", abiDecode)
-		.render();
-	});
-}
-
 string YulUtilFunctions::tryDecodeErrorMessageFunction()
 {
 	string const functionName = "try_decode_error_message";

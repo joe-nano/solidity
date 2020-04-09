@@ -1314,7 +1314,16 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 		</isTryCall>
 		<?hasRetVars> let <retVars> </hasRetVars>
 		if <success> {
-			<?hasRetVars> <retVars> := </hasRetVars> <decodeReturnParameters>(<pos>, <returnSize>)
+			<?dynamicReturnSize>
+				// copy dynamic return data out
+				returndatacopy(<pos>, 0, returndatasize())
+			</dynamicReturnSize>
+
+			// update freeMemoryPointer according to dynamic return size
+			mstore(<freeMemoryPointer>, add(<pos>, <roundUp>(<returnSize>)))
+
+			// decode return parameters from external try-call into retVars
+			<?hasRetVars> <retVars> := </hasRetVars> <abiDecode>(<pos>, add(<pos>, <returnSize>))
 		}
 	)");
 	templ("pos", m_context.newYulVariable());
@@ -1339,10 +1348,10 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 	templ("hasRetVars", !retVars.empty());
 	solAssert(retVars.empty() == returnInfo.returnTypes.empty(), "");
 
-	templ("decodeReturnParameters", m_utils.decodeReturnParametersFunction(
-		returnInfo.returnTypes,
-		returnInfo.dynamicReturnSize
-	));
+	templ("roundUp", m_utils.roundUpFunction());
+	templ("abiDecode", abi.tupleDecoder(returnInfo.returnTypes, true));
+	templ("dynamicReturnSize", returnInfo.dynamicReturnSize);
+	templ("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer));
 
 	templ("isTryCall", _functionCall.annotation().tryCall);
 	if (_functionCall.annotation().tryCall)

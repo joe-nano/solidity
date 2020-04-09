@@ -324,15 +324,6 @@ public:
 
 	std::string revertReasonIfDebug(std::string const& _message = "");
 
-	/// Generates the function-body and returns the function name for a function to decode the
-	/// return parameters of an external function call.
-	///
-	/// @param _returnTypes       Function call's return types.
-	/// @param _dynamicReturnSize Whether or not the return size is determined dynamically.
-	///
-	/// @returns helper function-name used to decode return parameters.
-	std::string decodeReturnParametersFunction(TypePointers const& _returnTypes, bool _dynamicReturnSize);
-
 	/// The returned function either fails upon coding and then returns 0,
 	/// on success, the returned function returns a newly allocated memory storage
 	/// containing the decoded error message.
