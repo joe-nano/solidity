@@ -1307,11 +1307,9 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 		let <end> := <encodeArgs>(add(<pos>, 4) <argumentString>)
 
 		let <success> := <call>(<gas>, <address>, <?hasValue> <value>, </hasValue> <pos>, sub(<end>, <pos>), <pos>, <reservedReturnSize>)
-		<?isTryCall>
-			let <trySuccessConditionVariable> := <success>
-		<!isTryCall>
+		<?noTryCall>
 			if iszero(<success>) { <forwardingRevert>() }
-		</isTryCall>
+		</noTryCall>
 		<?hasRetVars> let <retVars> </hasRetVars>
 		if <success> {
 			<?dynamicReturnSize>
@@ -1328,7 +1326,10 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 	)");
 	templ("pos", m_context.newYulVariable());
 	templ("end", m_context.newYulVariable());
-	templ("success", m_context.newYulVariable());
+	if (_functionCall.annotation().tryCall)
+		templ("success", m_context.trySuccessConditionVariable(_functionCall));
+	else
+		templ("success", m_context.newYulVariable());
 	templ("freeMemory", freeMemory());
 	templ("shl28", m_utils.shiftLeftFunction(8 * (32 - 4)));
 	templ("funId", IRVariable(_functionCall.expression()).part("functionIdentifier").name());
@@ -1353,9 +1354,7 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 	templ("dynamicReturnSize", returnInfo.dynamicReturnSize);
 	templ("freeMemoryPointer", to_string(CompilerUtils::freeMemoryPointer));
 
-	templ("isTryCall", _functionCall.annotation().tryCall);
-	if (_functionCall.annotation().tryCall)
-		templ("trySuccessConditionVariable", m_context.trySuccessConditionVariable(_functionCall));
+	templ("noTryCall", !_functionCall.annotation().tryCall);
 
 	// If the function takes arbitrary parameters or is a bare call, copy dynamic length data in place.
 	// Move arguments to memory, will not update the free memory pointer (but will update the memory
