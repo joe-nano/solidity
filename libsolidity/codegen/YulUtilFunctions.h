@@ -324,11 +324,11 @@ public:
 
 	std::string revertReasonIfDebug(std::string const& _message = "");
 
-	/// The returned function either fails upon coding and then returns 0,
-	/// on success, the returned function returns a newly allocated memory storage
-	/// containing the decoded error message.
+	/// Returns the name of a function that decodes an error message.
+	/// signature: () -> arrayPtr
 	///
-	/// @returns helper function that tries to decode the error message from a "structured" revert() instruction.
+	/// Returns a newly allocated `bytes memory` array containing the decoded error message
+	/// or 0 on failure.
 	std::string tryDecodeErrorMessageFunction();
 
 
