@@ -15,7 +15,8 @@
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <libsolidity/codegen/ReturnInfoCollector.h>
+#include <libsolidity/codegen/ReturnInfo.h>
+
 #include <libsolidity/ast/Types.h>
 #include <libsolidity/ast/AST.h>
 

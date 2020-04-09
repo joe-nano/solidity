@@ -21,13 +21,14 @@
  */
 
 #include <libsolidity/codegen/ExpressionCompiler.h>
-#include <libsolidity/codegen/ReturnInfoCollector.h>
 
-#include <libsolidity/ast/AST.h>
-#include <libsolidity/ast/TypeProvider.h>
+#include <libsolidity/codegen/ReturnInfo.h>
 #include <libsolidity/codegen/CompilerContext.h>
 #include <libsolidity/codegen/CompilerUtils.h>
 #include <libsolidity/codegen/LValue.h>
+
+#include <libsolidity/ast/AST.h>
+#include <libsolidity/ast/TypeProvider.h>
 
 #include <libevmasm/GasMeter.h>
 #include <libsolutil/Common.h>

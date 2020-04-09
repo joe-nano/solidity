@@ -19,7 +19,6 @@
  */
 
 #include <libsolidity/codegen/ir/IRGeneratorForStatements.h>
-#include <libsolidity/codegen/ReturnInfoCollector.h>
 
 #include <libsolidity/codegen/ABIFunctions.h>
 #include <libsolidity/codegen/ir/IRGenerationContext.h>
@@ -28,6 +27,7 @@
 #include <libsolidity/codegen/YulUtilFunctions.h>
 #include <libsolidity/codegen/ABIFunctions.h>
 #include <libsolidity/codegen/CompilerUtils.h>
+#include <libsolidity/codegen/ReturnInfo.h>
 #include <libsolidity/ast/TypeProvider.h>
 
 #include <libevmasm/GasMeter.h>
